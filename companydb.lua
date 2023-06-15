@@ -66,6 +66,58 @@ function Companydb:save_data()
   end
 end
 
+function Companydb:load_data(company_name)
+  local file_path = company_name .. ".dat"
+  local file = io.open(file_path, "r")
+  if file then
+    local company = Companydb.new(company_name)
+
+    local no_of_employees = tonumber(file:read("*line"))
+    for i = 1, no_of_employees do
+      local name = file:read("*line")
+      local email = file:read("*line")
+      local phone = file:read("*line")
+      local salary = tonumber(file:read("*line"))
+      if salary == nil then
+        salary = 0
+      end
+      company:add_employee(Employee.new(name, email, phone, salary))
+    end
+
+    local no_of_customers = tonumber(file:read("*line"))
+    for i = 1, no_of_customers do
+      local name = file:read("*line")
+      local email = file:read("*line")
+      local phone = file:read("*line")
+      local no_of_purchases = tonumber(file:read("*line"))
+      if no_of_purchases == nil then
+        no_of_purchases = 0
+      end
+      local purchases = {}
+      for j = 1, no_of_purchases do
+        local item = file:read("*line")
+        local quantity = tonumber(file:read("*line"))
+        if quantity == nil then
+          quantity = 0
+        end
+        local cost = tonumber(file:read("*line"))
+        if cost == nil then
+          cost = 0
+        end
+        table.insert(purchases, Purchase.new(item, quantity, cost))
+      end
+      local customer = Customer.new(name, email, phone)
+      customer.purchases = purchases
+      company:add_customer(customer)
+    end
+
+    file:close()
+    return company
+  else
+    return Companydb.new(company_name)
+  end
+end
+
 local function prompt(message)
   io.write(message)
   return io.read():gsub("\n", "")
@@ -75,7 +127,7 @@ local function readNumericChoice()
   local choice
   repeat
     local input = prompt('Choice? ')
-    choice = tonumber(input)
+    choice = tonumber(input, 10)
     if choice == nil then
       print('Invalid choice. Please enter a valid number.')
     end
@@ -93,7 +145,7 @@ local function readData(data, company_name)
     local name = data[j + 1]:gsub("^%s*(.-)%s*$", "%1")
     local email = data[j + 2]:gsub("^%s*(.-)%s*$", "%1")
     local phone = data[j + 3]:gsub("^%s*(.-)%s*$", "%1")
-    local salary = tonumber(data[j + 4])
+    local salary = tonumber(data[j + 4],10)
     j = j + 4
     index = j + 1
     company:add_employee(Employee.new(name, email, phone, salary))
@@ -126,7 +178,7 @@ local function readData(data, company_name)
 end
 
 local company_name = prompt('Enter the name of the company: ')
-local company
+local company = Companydb:load_data(company_name)
 
 while true do
   print("\nMAIN MENU:")
@@ -148,7 +200,7 @@ while true do
         local employee_name = prompt('Name: ')
         local employee_email = prompt('Email: ')
         local phone = prompt('Phone: ')
-        local salary = prompt('Salary: ')
+        local salary = tonumber(prompt('Salary: '), 10)
         company:add_employee(Employee.new(employee_name, employee_email, phone, salary))
       else
         print('Invalid choice.')
@@ -156,7 +208,7 @@ while true do
     end
   elseif choice == 2 then
     while true do
-      local sales_customers_choice = prompt('(A)dd Customer, Enter a (S)ale, View (C)ustomer, or (M)ain Menu?')
+      local sales_customers_choice = prompt('(A)dd Customer, Enter a (S)ale, (V)iew Customer, or (M)ain Menu?')
 
       if sales_customers_choice == 'A' then
         local customer_name = prompt("Name: ")
@@ -170,11 +222,11 @@ while true do
           local customer_name = company.customers[choice_of_customer]
 
           local item = prompt('Item: ')
-          local quantity = prompt('Quantity: ')
-          local cost = prompt('Cost: ')
+          local quantity = tonumber(prompt('Quantity: '),10)
+          local cost = tonumber(prompt('Cost: '),10)
           customer_name:add_purchase(item, quantity, cost)
         end
-      elseif sales_customers_choice == 'C' then
+      elseif sales_customers_choice == 'V' then
         company:display_customers()
         if #company.customers > 0 then
           local choice_of_customer = readNumericChoice()
@@ -184,8 +236,10 @@ while true do
           print("Item \t\t Price  Quantity  Total")
           customer_name:display_purchase()
         end
-      else
+      elseif sales_customers_choice == 'M' then
         break
+      else
+        print('Invalid choice.')
       end
     end
   elseif choice == 3 then
